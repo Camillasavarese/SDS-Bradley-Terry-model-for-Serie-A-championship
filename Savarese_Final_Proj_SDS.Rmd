@@ -1,0 +1,910 @@
+---
+title: \Huge Bradley Terry  model for Serie A championship
+author: \Large Savarese Camilla 1838890
+date: \Large A.Y. 2021/2022
+output:
+  pdf_document:
+    keep_tex: yes
+    toc: no
+  html_document:
+    keep_md: yes
+    theme: united
+fontsize: 12pt
+header-includes:
+              - \usepackage[fontsize=15pt]{scrextend} 
+              - \usepackage[utf8]{inputenc}
+              - \usepackage{amsmath}
+              - \usepackage{enumerate}
+              - \usepackage{setspace}
+              - \usepackage{docmute}
+              - \usepackage{fancyhdr}
+              - \usepackage{graphicx}
+              - \usepackage{rotating}
+              - \usepackage{subfig}
+              - \usepackage{ucs}
+              - \usepackage{geometry}
+              - \geometry{a4paper, top=2cm, bottom=2cm, left=1cm, right=1cm}
+              - \pagestyle{fancy}
+              - \fancyhf{}
+              - \cfoot{\thepage}
+---
+
+
+```{r setup, include=FALSE}
+library(knitr)
+
+knitr::opts_chunk$set(echo = TRUE)
+
+# the default output hook
+hook_output = knit_hooks$get('output')
+knit_hooks$set(output = function(x, options) {
+  if (!is.null(n <- options$out.lines)) {
+    x = unlist(stringr::str_split(x, '\n'))
+    if (length(x) > n) {
+      # truncate the output
+      x = c(head(x, n), '....\n')
+    }
+    x = paste(x, collapse = '\n') # paste first n lines together
+  }
+  hook_output(x, options)
+})
+```
+
+```{r, include=FALSE, include=FALSE, warning=FALSE}
+opts_chunk$set(out.lines = 23)
+```
+\newpage
+\textbf{ {\Large Content}}
+\begin{itemize}
+\item Theoretical overview of the Bradley Terry model with latent variables
+\item Application: Serie A championship
+\item Theoretical overview of the Bradley Terry model with ties
+\item Application: Serie A championship with ties
+\item Bibliography
+\end{itemize}
+\newpage
+\textbf{ {\large Theoretical overview of the Bradley Terry model with latent variables}}
+\hspace{2cm}
+
+The Bradley Terry Model is used to describe probabilities of possible outcomes when  there is a set of $K$ elements which are compared to each other in pairs.
+A parameter $\lambda_l > 0$  is associated to each element for $l \in {1,2,...K}$ and it represents its skill rating. Let's denote  $\lambda$ the set of all the$\lambda_i$.
+We denote by $D$ the associated data: each of them represents the (binary) result of the k-th comparison between $i$ and $j$.
+
+We also define:
+\begin{itemize}
+\item $w_{ij}$ : the number of comparisons where $i$ beats $j$
+\item $ w_i = \sum_{j=1}^K w_{ij}$: the number of wins of $i$
+\item $n_{ij} = w_{ij} + w_ {ji}$ : the number of matches between $i$ and $j$
+\end{itemize}
+
+Since in the original version proposed in 1952 the model was:
+$$\Pr(i \text{  beats } j) =  \frac{\lambda_i}{\lambda_i+\lambda_j} $$
+we can state that $$D_{kij}|\lambda \sim Ber(\frac{\lambda_i}{\lambda_i+\lambda_j})$$ where $k = 1,2,..,n_{ij}$ and   $1 \leq i < j \leq K$ .
+
+Additionally, according to (Gormley and Murphy, 2009; Guiver and Snelson, 2009) we can assign a prior Gamma distribution to each $\lambda_i$:$$\lambda_i \sim \Gamma(a,b)$$.
+
+Now we want to introduce some latent variables which are such that the resulting complete log likelihood admits a simple form. Thanks to the Thurstonian interpretation for each pair $1 \leq i < j \leq K$ and for each associated comparison $k = 1,2,..,n_{ij}$ let $Y_{ki} \sim \mathcal{E}(\lambda_i)$, $Y_{kj} \sim \mathcal{E}(\lambda_j)$ be exponential random variable so that $$ \Pr(Y_{ki} < Y_{kj}) = \frac{\lambda_i}{\lambda_i+\lambda_j} $$
+
+These latent variables can be interpreted as arrival times and the individual with the
+lowest arrival time wins.
+However, instead of introducing these variables, we introduce for each pair $i$, $j$ the latent random variable $$ Z_{ij} = \sum_{k=1}^{n_{ij}} min(Y_{ki},Y_{kj}) $$
+
+From the properties of the exponential distribution we know that  $$min(Y_{ki},Y_{kj}) \sim \mathcal{E}(\lambda_i + \lambda_j) $$  
+We also know that the sum of identically distributed exponential random variables is a Gamma distributions with shape given by the number of variables and rate equal to the exponential rate so in our case: $$Z_{ij} \sim \Gamma(n_{ij},\lambda_i+\lambda_j) $$
+The (conditional)  of the latent variables  $Z = Z_{ij}$ for $1 \leq i < j \leq K$ such that $n_{ij}>0$ is
+$$ p(z|D,\lambda) = \prod_{1 \leq i < j \leq K|n_{ij}>0} \Gamma(z_{ij}; n_{ij} ,\lambda_i+ \lambda_j) $$
+Now we have all the elements to obtain the  complete  likelihood of $\lambda$:
+
+$$ L(\lambda, z) = f(D,z_{11},..,z_{KK}| \lambda) = \prod_{1 \leq i < j \leq K}  \prod_{k=1}^{n_{ij}} f(d_{kij},z_{ij}|\lambda)$$
+$$= \prod_{1 \leq i < j \leq K}  \prod_{k=1}^{n_{ij}} f(d_{kij}|\lambda) f(z_{ij}|D, \lambda)$$
+
+Remembering that $$D_{kij}|\lambda \sim Ber(\frac{\lambda_i}{\lambda_i+\lambda_j})$$ for the first factor we have
+$$\prod_{k=1}^{n_{ij}} f(d_{kij}|\lambda) = \prod_{k=1}^{n_{ij}} \frac{\lambda_i^{d_{kij}}}{(\lambda_i+\lambda_j)^{d_{kij}}}  \cdot  \frac{\lambda_j^{1-d_{kij}}}{(\lambda_i+\lambda_j)^{1-d_{kij}}} = \frac{\lambda_i^{w_{ij}} \cdot \lambda_j^{w_{ji}}}{(\lambda_i+\lambda_j)^{n_{ij}}} $$
+where we can just rewrite the production in the numerator as
+$$ \prod_{1 \leq i < j \leq K} \lambda_i^{w_{ij}} \cdot \lambda_j^{w_{ji}} = \prod_{i=1}^K \lambda_i^{w_{i}} $$
+Inserting tha Gamma (conditional) distribution for the $Z_{ij}$ we obtain as "final form":
+$$ L(\lambda, z) =  \prod_{i=1}^{K} \lambda_i^{w_i} \prod_{1 \leq i < j \leq K|n_{ij}>0} \frac{1}{(\lambda_i+\lambda_j )^{n_{ij}}} \cdot \frac{(\lambda_i+\lambda_j )^{n_{ij}}}{\Gamma(n_{ij})} \cdot z_{ij}^{(n_{ij}-1)} \cdot e^{-(\lambda_i+\lambda_j)z_{ij}}$$
+that is quite simple and easy to handle.
+
+Our target is the posterior distribution of each $\lambda_i$, that is proportional to the prior times the likelihood: 
+$$ \pi(\lambda_i|z,D) \propto \pi(\lambda_i) L(\lambda,z) \propto \lambda_i^{a-1} e^{-\lambda_i b} \lambda_i^{w_i}\prod_{1 \leq i < j \leq K|n_{ij}>0} e^{-(\lambda_i \lambda_j) z_{ij}} \prod_{1 \leq j < i \leq K|n_{ij}>0} e^{-(\lambda_i \lambda_j) z_{ij}}$$
+$$ = \lambda_i^{(w_i+a)-1} \cdot \exp(-\lambda_i[b+ \sum_{i<j|n_{ij}>0}z_{ij} + \sum_{j<i|n_{ij}>0}z_{ji}])$$
+
+So we obtain that $\lambda_i|z,D$ is distributed (up to a proportionality constant) as:
+$$\lambda_i|z,D \sim \Gamma(a+w_i, b+ \sum_{i<j|n_{ij}>0}z_{ij} + \sum_{j<i|n_{ij}>0}z_{ji})$$
+
+Thanks to the introduction of these latent $Z$ variables, we are able to derive our Gibbs samplers.
+
+At  iteration $t$ we have (always considering  $1\leq i< j\leq K$ such that $n_{ij}>0)$:
+
+$$Z_{ij}|D,\lambda^{(t-1)} \sim \Gamma(n_{ij} ,  \lambda_i^{(t-1)}+\lambda_j^{(t-1)})$$ 
+
+and for $i=1,..,K$ 
+                             
+$$\lambda_i^{(t)}| D, Z^{(t)} \sim \Gamma(a+w_i, b+ \sum_{i<j|n_{ij}>0}z_{ij}^{(t)} + \sum_{j<i|n_{ij}>0}z_{ji}^{(t)})$$
+\newpage
+\textbf{ {\large Application: Serie A championship}}
+\hspace{3cm}
+
+\textbf{Data}
+
+The Dataset  used for the application of Bradley Terry model contains $3800$ Serie A matches from $2009$ to $2019$. Every year $20$ teams were part of the competition, and there are "exchanges" between Serie A and Serie B so some are not always present. 
+I decided to choose only the $10$ teams that have always participated and that have also been present over the years $2020/2022$, to be able to compare the results.
+In this way I was left with  $812$ rows.
+From the initial dataset I have selected only the variables that interest me:"Date", "HomeTeam", "AwayTeam", "FTR". The last one is the final result: H if home team won, A if the away team won and D if the match ended in a draw.
+```{r, echo=FALSE}
+#Load and concatenate data
+d1 <- read.csv("C:/Users/Umberto/Desktop/CAMI/SDS2_tardella/Progetto Finale/data/1819.csv")
+d1<-subset(d1, select = c("Date","HomeTeam","AwayTeam","FTR"))
+d2 <- read.csv("C:/Users/Umberto/Desktop/CAMI/SDS2_tardella/Progetto Finale/data/1718.csv")
+d3 <- read.csv("C:/Users/Umberto/Desktop/CAMI/SDS2_tardella/Progetto Finale/data/season-1617_csv.csv")
+d4 <- read.csv("C:/Users/Umberto/Desktop/CAMI/SDS2_tardella/Progetto Finale/data/season-1516_csv.csv")
+d5 <- read.csv("C:/Users/Umberto/Desktop/CAMI/SDS2_tardella/Progetto Finale/data/season-1415_csv.csv")
+d6 <- read.csv("C:/Users/Umberto/Desktop/CAMI/SDS2_tardella/Progetto Finale/data/season-1314_csv.csv")
+d7 <- read.csv("C:/Users/Umberto/Desktop/CAMI/SDS2_tardella/Progetto Finale/data/season-1213_csv.csv")
+d8 <- read.csv("C:/Users/Umberto/Desktop/CAMI/SDS2_tardella/Progetto Finale/data/season-1112_csv.csv")
+d9 <- read.csv("C:/Users/Umberto/Desktop/CAMI/SDS2_tardella/Progetto Finale/data/season-1011_csv.csv")
+d10 <- read.csv("C:/Users/Umberto/Desktop/CAMI/SDS2_tardella/Progetto Finale/data/season-0910_csv.csv")
+d2<-subset(d2, select = c("Date","HomeTeam","AwayTeam","FTR"))
+d3<-subset(d3, select = c("Date","HomeTeam","AwayTeam","FTR"))
+d4<-subset(d4, select = c("Date","HomeTeam","AwayTeam","FTR"))
+d5<-subset(d5, select = c("Date","HomeTeam","AwayTeam","FTR"))
+d6<-subset(d6, select = c("Date","HomeTeam","AwayTeam","FTR"))
+d7<-subset(d7, select = c("Date","HomeTeam","AwayTeam","FTR"))
+d8<-subset(d8, select = c("Date","HomeTeam","AwayTeam","FTR"))
+d9<-subset(d9, select = c("Date","HomeTeam","AwayTeam","FTR"))
+d10<-subset(d10, select = c("Date","HomeTeam","AwayTeam","FTR"))
+d=rbind(d1,d2,d3,d4,d5,d6,d7,d8,d9,d10)
+
+```
+
+```{r,echo=FALSE}
+#Only teams present in 2020/2022
+data<-subset(d, AwayTeam == "Juventus" | AwayTeam == "Milan" | AwayTeam =="Inter"| AwayTeam =="Roma"| AwayTeam =="Lazio"| AwayTeam =="Fiorentina"| AwayTeam =="Napoli"| AwayTeam =="Sampdoria"| AwayTeam =="Torino"| AwayTeam =="Bologna")
+
+data<-subset(data, HomeTeam == "Juventus" | HomeTeam == "Milan" | HomeTeam =="Inter"| HomeTeam =="Roma"| HomeTeam =="Lazio"| HomeTeam =="Fiorentina"| HomeTeam =="Napoli"| HomeTeam =="Sampdoria"| HomeTeam =="Torino"| HomeTeam =="Bologna")
+```
+
+In the model described so far, we have not considered the ties, so for now we eliminate them from the dataset, remaining with $582$ matches. Obviously we must consider that in this way some teams could have a lower number of comparisons than the others.
+```{r,echo=FALSE}
+data2= subset(data,subset= data$FTR!="D")
+```
+
+Luckily, looking at the plot, the number of games for each team is fairly uniform.
+
+```{r,echo=FALSE}
+pie(table(data2$HomeTeam),main = "Pie chart Home Team")
+```
+
+```{r,echo=FALSE}
+pie(table(data2$AwayTeam),main = "Pie chart Away Team")
+```
+
+
+At this point, we want to estimate $\lambda_i$ for $i=1,..,10$ that represents the  skill rating of each time, so we mean it as a measure of how strong a team is and how much they can get to the top of the classification. 
+These are the $10$ teams we are considering:
+```{r,echo=FALSE}
+print(unique(data2$AwayTeam))
+
+```
+
+We need to calculate all the quantities needed for our model based on the data:
+
+- $n_{ij}$ , the number of games between $i$ and $j$: 
+```{r}
+n<-as.matrix(table(data2$HomeTeam,data2$AwayTeam))
+nij<-n+t(n)
+```
+For example, these are the matches that Milan has played with all the other teams:
+```{r,echo=FALSE}
+nij[6,1:5]
+nij[6,6:10]
+```
+- $w_{ij}$ and $w_{ji}$ , the number of games $i$ won against $j$. To get them we need to compute the two matrix w_home and w_away, that contain matches which are won by only the home (or away) team:
+```{r}
+#wij
+home<-subset(data2, FTR=="H")
+w_home<-table(home$HomeTeam,home$AwayTeam)
+away<-subset(data2, FTR=="A")
+w_away<-table(away$HomeTeam,away$AwayTeam)
+wij<-w_home+t(w_away)
+wji<-t(wij)
+```
+These are the matches that Milan has won with all the other teams:
+```{r, echo=FALSE}
+wij[6,1:5]
+wij[6,6:10]
+```
+
+- $w_i$ the total number of games won by team $i$. We show it for each team. 
+```{r,echo=FALSE}
+#wi
+wi<-apply(wij,1,sum)
+wi[1:5]
+wi[6:10]
+```
+
+To implement the the Gibbs sampling algorithm I have to choose the hyperparameter for each $\lambda_i$, and I simply set $a = b= 0.01$ to have a flat prior. 
+
+I also set the number of iteration $T= 10.000$ and a set.seed to be able to reproduce my results.
+
+```{r,}
+set.seed(1234)
+N=length(data2$Date)
+T<-10000
+samples<-matrix(NA,nrow = T, ncol = 10) 
+colnames(samples)=c(paste0("lambda[",1:10,"]"))
+
+a<-0.01
+b<-0.01
+lambda<-c(rgamma(10,shape = a, rate=b))
+z<-matrix(0,10,10)
+
+```
+```{r}
+for(t in 1:T){
+  
+  #zij time t
+  for(i in 1:(10-1)){  #i<j
+    for(j in (i+1):10){ 
+      z[i,j]=rgamma(1,shape=nij[i,j],rate=lambda[i]+lambda[j])
+    }
+  }
+  
+  for(i in 1:10) {
+    lambda[i]=rgamma(1,shape=a+wi[i],rate=b+sum(z[i,])+sum(z[,i]))
+  }
+  
+  lambda=lambda/sum(lambda) #normalization lambda
+  
+  samples[t,]=lambda
+  }
+
+```
+
+To choose the burn-in time, I plotted the first values for $\lambda_1$ and decided to delete the first $200$ iterations.
+
+```{r,echo=FALSE}
+plot(samples[1:500,1],ylab= "lambda_1")
+abline(v=200, col="red")
+#Burn-in
+samples<-samples[-(1:200),] 
+
+```
+
+\newpage
+Now we can calculate the posterior means for the parameters $\lambda_i$ ad get our estimates:
+
+```{r,echo=FALSE}
+estimates<-round(apply(samples, 2, mean),3)
+team=c("Bologna", "Fiorentina", "Inter", "Juventus","Lazio", "Milan", "Napoli", "Roma", "Sampdoria", "Torino")
+score<-matrix(NA,nrow = 10, ncol = 2)
+score[,1]=team
+score[,2]=estimates
+print(score)
+```
+
+
+
+How do we evaluate how good they are? We have some options. 
+
+The first one is compared our estimates with team’s ELO (from the  creator Arpad Elo). The ELO rating is a deterministic measure of the team’s strength,and is used in various sports such as chess or American football. 
+
+It is defined such that the difference in the ratings between two players serves as a predictor of the outcome of a match, as an estimate for the expected score $E_{ij}$
+between them:
+
+$$E_{ij}  = \frac{1}{1+10 \frac{ELO_j-ELO_i}{400}}  $$
+Two players with equal ratings who play against each other have an equal chance of winning. 
+
+Searching the web, I found these scores  calculated for the teams that participated in the $2022$ Italian football championship, and therefore we can compare the two orders:
+
+```{r,echo=FALSE}
+need = score[,2]
+print("Posterior means ordered")
+score[order(score[,2],decreasing=TRUE),]
+Elo<-matrix(NA,nrow = 10, ncol = 2)
+Elo[,1]=team
+Elo[,2]= c(2363,2345,2569,2666,2557,2363,2510,2564,2313,2380)
+print("Elo score ordered")
+Elo[order(Elo[,2],decreasing=TRUE),]
+```
+
+We can observe that the teams’ strength estimated by the Bradley Terry model are not ordered exactly in the same way of the ELO.
+The first  and third position coincide, and in general we have that the same teams occupy the top and bottom of the ranking.
+
+To quantify the difference between the two ranking, we can use the Kendall Tau distance, which is based on the number of agreements and disagreements :
+
+$$ \tau = \frac{(concordant \ pairs) - (discordant \ pairs)}{n(n-1)/2} $$
+
+```{r,echo=FALSE}
+library(Kendall)
+print("Kendall distance posterior means-Elo score: ")
+u_3 = order(score[order(score[,2],decreasing=TRUE),])
+u_4 = order(Elo[order(Elo[,2],decreasing=TRUE),])
+print(Kendall(u_3,u_4))
+      
+```
+Considering that the maximum is $1$, it is an acceptable value.
+
+The differences are mainly due to the fact that the Elo are updated to $2022$ while in the dataset we arrive at $2019$. 
+
+To "go beyond" this problem, we can compare the order of the $\lambda$ with the final rankings of the years $2020,2021$ and $2022$.
+
+
+```{r,echo=FALSE}
+clas_1920= c("Juventus","Inter","Lazio","Rome","Milan","Napoli","Fiorentina","Bologna","Sampdoria","Torino")
+clas_2021= c("Inter","Milan","Juventus","Napoli","Lazio","Rome","Sampdoria","Bologna","Fiorentina","Torino")
+clas_2122= c("Milan","Inter","Napoli","Juventus","Lazio","Roma","Fiorentina","Torino", "Bologna","Sampdoria")
+```
+\textbf{2019-2020}
+
+```{r,echo=FALSE}
+
+u_1=order(score[order(score[,2],decreasing=TRUE),1])
+u_2=order(clas_1920,decreasing=TRUE)
+print("Kendall distance posterior means-classification 2019-2020: ")
+print(Kendall(u_1,u_2))
+```
+\textbf{2020-2021}
+
+```{r,echo=FALSE}
+u_5=order(clas_2021,decreasing=TRUE)
+print("Kendall distance posterior means-classification 2020-2021: ")
+print(Kendall(u_1,u_5))
+```
+
+\textbf{2021-2022}
+
+```{r,echo=FALSE}
+u_6=order(clas_2122,decreasing=TRUE)
+print("Kendall distance posterior means-classification 2021-2022: ")
+print(Kendall(u_1,u_6))
+
+```
+
+These results confirm what has been said: the more time passes compared to 2019 (the last year for which we have the data), the more the predicted values deviate from the true ones.
+
+\newpage
+\textbf{Diagnostics}
+
+We can compute the Effective Sample Size of each Markov Chain, that is the number of independent samples with the same estimation power as the $T=10.000$ autocorrelated samples. They are all smaller than half of $T$.
+```{r,echo=FALSE}
+library(LaplacesDemon)
+#effective sample size
+Kn<-as.numeric(length(samples[1,]))  
+ESS<-rep(NA,Kn)
+for(i in 1:Kn) {
+  ESS[i]<-ESS(samples[,i])
+}
+names(ESS)=c(paste0("ESS[",1:Kn,"]"))
+ESS[1:5]
+ESS[6:10]
+
+```
+We also compute the Monte Carlo Markov Chain errors, that are almost zero:
+```{r,echo=FALSE}
+#monte carlo standardard error
+MCSE<-rep(NA,Kn)
+for(i in 1:Kn) {
+  MCSE[i]<-round(MCSE(samples[,i]),5)
+}
+
+names(MCSE)=c(paste0("MCSE[",1:Kn,"]"))
+MCSE[1:5]
+MCSE[6:10]
+```
+\newpage
+We plot the traceplot, to see if we have convergence and therefore a stationary behavior.
+Thanks to the Burn-in $= 200$ we get the desired results.
+
+```{r,echo=FALSE}
+s = c( 0.049, 0.093, 0.287, 0.070, 0.089, 0.172, 0.132, 0.048, 0.037)
+par(mfrow=c(2,2))
+for (i in 1:4) {
+  plot(samples[,i],type = "l",main=paste("traceplot lambda",i),col="blue",ylim=c(0,0.5))
+  
+}
+```
+
+```{r,echo=FALSE}
+par(mfrow=c(2,2))
+for (i in 5:8) {
+  plot(samples[,i],type = "l",main=paste("traceplot lambda",i),col="blue",ylim=c(0,0.5))
+}
+
+```
+
+```{r,echo=FALSE}
+par(mfrow=c(2,2))
+for (i in 9:10) {
+  plot(samples[,i],type = "l",main=paste("traceplot lambda",i),col="blue",ylim=c(0,0.5))
+}
+```
+
+\newpage
+
+These are also the autocorrelation functions, to see if there is serial  correlation.
+As expected, all autocorrelations decrease as the lag $t$ increases, until they reach practically zero values.
+
+```{r,echo=FALSE}
+par(mfrow=c(2,2))
+for (i in 1:4) {
+  acf(samples[,i],main=paste("Acf lambda",i))
+}
+
+```
+
+```{r,echo=FALSE}
+par(mfrow=c(2,2))
+for (i in 5:8) {
+  acf(samples[,i],main=paste("Acf lambda",i))
+}
+```
+
+
+```{r,echo=FALSE}
+par(mfrow=c(2,2))
+for (i in 9:10) {
+  acf(samples[,i],main=paste("Acf lambda",i))
+}
+```
+
+\newpage
+\textbf{ {\large  Theoretical overview of the Bradley Terry model with ties}}
+
+If we want to allow for ties in pairwise comparison, we have to refer to the model proposed by Rao and Kupper in $1967$. With respect to the original version ($1952$) we have that : 
+$$\Pr(i \text{  beats } j) =  \frac{\lambda_i}{\lambda_i+ \theta\lambda_j} = p_1 $$
+$$\Pr(j \text{  beats } i) =  \frac{\lambda_i}{\theta\lambda_i+ \lambda_j} = p_3 $$
+$$\Pr(i \text{  ties } j) =  \frac{(\theta^2 -1)\lambda_i\lambda_j}{ (\theta\lambda_i+ \lambda_j)(\lambda_i+ \theta\lambda_j)} = p_2 $$
+So that we can state that 
+$$D_{kij}|\lambda,\theta \sim Multinomial(1,(p_1,p_2,p_3))$$ 
+The parameter $\theta$ is define for values of $\theta > 1$. If it's small, the probability of having a tie is almost $0$, while if $\theta$  tends to infinity this probability tends to $1$. The prior distribution for $\lambda$ is the same Gamma as before.
+Furthermore, we suppose independent prior for the $\lambda_i$ and $\theta$. 
+In the model it's state that if $\bar{\theta}  = \theta - 1$  we have:
+$$ \bar{\theta} \sim \Gamma(a_{\theta},b_{\theta}) $$
+The (conditional)  distribution of the latent variables is: 
+$$p(z|D,\lambda,\theta) = \prod_{1 \leq i \neq j \leq K|s_{ij}>0} \Gamma(z_{ij}; s_{ij} ,\lambda_i+ \theta\lambda_j)$$ 
+where $s_{ij}= w_{ij} + t_{ij}$ and $t_{ij}$ is the number of ties between $i$ and $j$.
+
+Combining the previous equations we can get the  likelihood:
+Now we have all the elements to obtain the  complete  likelihood of $\lambda$:
+
+$$ l(\lambda,\theta, z) = log(f(D,z_{11},..,z_{KK}| \lambda,\theta)) =$$ $$\sum_{1 \leq i \neq j \leq K|s_{ij}>0} s_{ij}log(\lambda_i) + \frac{t_{ij}}{2}log(\theta^2-1)+(s_{ij}-1)log(z_{ij}) -(\lambda_i+\theta \lambda_j)z_{ij}+log(\Gamma(s_{ij}))$$
+From the likelihood which we obtain the full conditional (posterior) of $\lambda_i$ and $\theta$:
+
+$$ \pi(\lambda_i|z,D,\theta) \propto   \pi(\lambda_i) L(\lambda,\theta,z) $$
+$$ \pi(\theta|z,D,\theta,\lambda)   \propto \pi(\theta) L(\lambda,\theta,z) $$
+To obtain the full conditional of the $\lambda_i$ the reasoning is similar to that of the original model:
+$$\lambda_i|z,D,\theta \sim \Gamma(a+\sum_{i \neq j}s_{ij}, b+ \sum_{i\neq j|s_{ij}>0}z_{ij} + \theta \sum_{j \neq i|s_{ij}>0} z_{ji})$$
+while for $\theta$ we get:
+
+$$\theta|z,D,\lambda \propto (\theta^2 -1)^T (\theta-1)^{a_{\theta}-1}\exp(- (b_{\theta}+ \sum_{1\le i \neq j \le K |s_{ij}>0} \lambda_jz_{ij})\theta) \mathbb{1}_{(\theta >1)}$$
+where $T= \frac{1}{2} \sum_{1 \le i \neq j \le K}  t_{ij}$ represents the total number of ties.
+
+Also in this case, thanks to the introduction of the latent $Z$ variables, we are able to derive our Gibbs samplers.
+At iteration $t$ we have  (always considering $1 \le i \neq j \le K$ such that $s_{ij} > 0$):
+
+$$Z_{ij}^{(t)}|D,\lambda^{(t-1)},\theta^{(t-1)} \sim \Gamma(s_{ij} ,  \lambda_i^{(t-1)}+\theta^{(t-1)}\lambda_j^{(t-1)})$$ 
+
+and for $i=1,..,K$ 
+                             
+$$\lambda_i^{(t)}| D, Z^{(t)},\theta^{(t-1)} \sim \Gamma(a+\sum_{i \neq j}s_{ij}, b+ \sum_{i\neq j|s_{ij}>0}z_{ij}^{(t)} + \theta^{(t-1)} \sum_{j \neq i|s_{ij}>0} z_{ji}^{(t)})$$
+
+$$\theta^{(t)}| D, Z^{(t)},\lambda^{(t-1)} \sim \pi(\theta|D,Z^{(t)},\lambda^{(t-1)})$$
+\newpage
+\textbf{ {\large  Application: Serie A championship with ties}}
+
+We consider the same data as before, this time considering also the ties. We have 812 matches. The $n_{ij} , w_{ij} , w_i$ are computed in the same way as in the previous mode.
+
+We also need $t_{ij}$ , the number of ties between $i$ and $j$ and $T$:
+
+```{r,echo=FALSE}
+k= length(unique(data$AwayTeam))
+k #10 team
+
+#nij
+n<-as.matrix(table(data$HomeTeam,data$AwayTeam))
+nij<-n+t(n)
+```
+
+
+```{r}
+#tij
+ties<-subset(data, FTR == "D" )
+t<-as.matrix(table(ties$HomeTeam,ties$AwayTeam))
+tij<-t+t(t)
+
+T<-0.5*(sum(tij))
+#wij
+home<-subset(data, FTR=="H")
+w_home<-table(home$HomeTeam,home$AwayTeam)
+away<-subset(data, FTR=="A")
+w_away<-table(away$HomeTeam,away$AwayTeam)
+wij<-w_home+t(w_away)
+wji<-t(wij)
+#wi
+wi<-apply(wij,1,sum)
+
+```
+Finally $s_{ij} = w_{ij} + t_{ij}$:
+
+```{r}
+#sij
+sij=wij+tij
+```
+
+To implement the the Gibbs sampling algorithm I have to choose the hyperparameter for
+each $\lambda_i$ , and I simply set $a=b=0.01$ as before, while for $\theta$ I choose $a_{\theta}=0.1$,$b_{\theta}=0.1$ as in the paper.
+
+
+Since $(\theta^2-1)^T$ is quite a huge number, and we can have problem from a computational point of view, the idea is to use a Metropolis Hastings step in order to
+sample $\theta$ values with a normal random walk proposal with standard
+deviation $0.1$ and then take  the logarithm of the acceptance rule to avoid
+the above problem.
+
+```{r}
+set.seed(1234)
+N=length(data$Date)
+Tg<-10000
+samples<-matrix(NA,nrow = Tg, ncol = k+1) #10 lambda, 1 theta
+colnames(samples)=c(paste0("lambda[",1:k,"]"),
+                            paste0("theta"))
+
+a<-0.01
+b<-0.01
+lambda<-c(rgamma(k,shape = a, rate=b))
+
+a_t<-0.1
+b_t<-0.1
+theta<-rgamma(1,shape = a_t,rate = b_t)+1
+z<-matrix(0,10,10)
+
+#pi
+logtarget =  function(theta, z, lambda, a_t, b_t) {
+T*(log(theta^2-1))+(a_t-1)*(log(theta-1))-(b_t+apply(z,2,sum)%*%lambda)*theta
+}
+#p
+logproposal= function(x,mu){
+  dnorm(x,mean=mu,sd=0.1,log = T)
+}
+```
+
+```{r, echo=FALSE}
+library(truncnorm)
+```
+
+```{r}
+#Gibbs cycle
+for(t in 1:Tg){
+  
+  for(i in 1:k){
+    for(j in 1:k){ if (i!=j) {
+      z[i,j]=rgamma(1,sij[i,j],lambda[i]+theta*lambda[j])
+    }
+    }
+  }
+  
+  for(i in 1:k) {
+    lambda[i]=rgamma(1,a+sum(sij[i,]),b+sum(z[i,])+theta*sum(z[,i]))
+  }
+  
+  lambda=lambda/sum(lambda) 
+  samples[t,1:k]=lambda
+  
+  x=theta  # state of the chain at the current time
+  
+  #draw a candidate for the next state of the chain 
+  y = rtruncnorm(1,a=1,mean=x,sd=0.1) # constraint on theta
+  ## acceptance/rejection auxiliary draw
+  o = runif(1,min=0,max=1)
+  
+  #acceptance rule
+  ACCEPT=(log(o)<logtarget(y,z,lambda, a_t, b_t)-logtarget(theta,z,lambda, a_t, b_t)
+          +logproposal(x,mu=y)-logproposal(y,mu=x))
+  
+  theta=samples[t,k+1] <- ifelse(ACCEPT,y,theta)
+  }
+```
+
+Also this time,to choose the burn-in time, I plotted the first values for $\lambda_1$ and decided to delete the first $200$ iterations.
+
+
+```{r,echo=FALSE}
+plot(samples[1:500,1],ylab= "lambda_1")
+abline(v=200, col="red")
+#Burn-in
+samples<-samples[-(1:200),] 
+```
+
+As before, we can calculate the posterior means for the parameters $\lambda_i$ ad get our estimates:
+
+```{r,echo=FALSE}
+estimates<-round(apply(samples, 2, mean),3)
+team=c( "Bologna",  "Fiorentina",  "Inter", "Juventus","Lazio", "Milan", "Napoli", "Roma", "Sampdoria",  "Torino", "theta")
+score<-matrix(NA,nrow = 11, ncol = 2)
+score[,1]=team
+score[,2]=estimates
+print(score)
+```
+
+We look at the comparison with the ELO score.
+
+```{r,echo=FALSE}
+print("Posterior means ordered")
+score[order(score[-11,2],decreasing=TRUE),]
+Elo<-matrix(NA,nrow = 10, ncol = 2)
+Elo[,1]=team[-11]
+Elo[,2]= Elo[,2]= c(2363,2345,2569,2666,2557,2363,2510,2564,2313,2380)
+print("Elo score ordered")
+Elo[order(Elo[,2],decreasing=TRUE),]
+```
+
+We can observe that the teams’ strength estimated by the Bradley Terry model are not ordered exactly in the same way of the ELO.
+As in the previous model, the first and third positions coincide, and in general we have that the same teams occupy the top and bottom of the ranking.
+
+```{r,echo=FALSE}
+s1 = c(0.037, 0.059, 0.100, 0.252, 0.074, 0.089, 0.156, 0.126, 0.054, 0.052)
+s1 = order(s1)
+score = score[-11,]
+u_7 = order(score[,2],decreasing=TRUE)
+uu=order(Elo[,2],decreasing=TRUE)
+print(Kendall(s1,uu))
+
+```
+
+Also this time we compare and quantify the order of the $\lambda$ with the final rankings of the years $2020,2021$ and $2022$.
+
+
+\textbf{2019-2020}
+```{r,echo=FALSE}
+print("Kendall distance posterior means-classification 2019-2020: ")
+u_10=order(clas_1920,decreasing=TRUE)
+print(Kendall(s1,u_10))
+```
+
+\textbf{2020-2021}
+
+```{r,echo=FALSE}
+print("Kendall distance posterior means-classification 2020-2021: ")
+u_11=order(clas_2021,decreasing=TRUE)
+print(Kendall(s1,u_11))
+```
+
+\textbf{2021-2022}
+
+```{r,echo=FALSE}
+print("Kendall distance posterior means-classification 2021-2022: ")
+u_12=order(clas_2122,decreasing=TRUE)
+print(Kendall(s1,u_12))
+
+```
+
+In this case results are worst than the previous model.
+
+\newpage
+\textbf{Diagnostic}
+
+We can compute the Effective Sample Size of each Markov Chain. Note that they are all smaller than half of $T$. The smaller one (last one) correspond to $\theta$.
+```{r,echo=FALSE}
+library(LaplacesDemon)
+#effective sample size
+Kn<-as.numeric(length(samples[1,]))  
+ESS<-rep(NA,Kn)
+for(i in 1:Kn) {
+  ESS[i]<-ESS(samples[,i])
+}
+names(ESS)=c(paste0("ESS[",1:Kn,"]"))
+ESS[1:5]
+ESS[6:10]
+ESS[11]
+```
+We also compute the Monte Carlo Markov Chain errors, that are almost zero:
+```{r,echo=FALSE}
+#monte carlo standardard error
+MCSE<-rep(NA,Kn)
+for(i in 1:Kn) {
+  MCSE[i]<-round(MCSE(samples[,i]),5)
+}
+
+names(MCSE)=c(paste0("MCSE[",1:Kn,"]"))
+MCSE[1:5]
+MCSE[6:10]
+MCSE[11]
+
+```
+\newpage
+We plot the traceplot, to see if we have convergence and therefore a stationary behavior.
+Thanks to the Burn-in $= 200$ we get the desired results.
+
+```{r,echo=FALSE}
+par(mfrow=c(2,2))
+for (i in 1:4) {
+  plot(samples[,i],type = "l",main=paste("traceplot lambda",i),col="blue",ylim = c(0,0.5))
+}
+```
+
+```{r,echo=FALSE}
+par(mfrow=c(2,2))
+for (i in 5:8) {
+  plot(samples[,i],type = "l",main=paste("traceplot lambda",i),col="blue",ylim = c(0,0.5))
+}
+
+```
+
+```{r,echo=FALSE}
+par(mfrow=c(2,2))
+for (i in 9:10) {
+  plot(samples[,i],type = "l",main=paste("traceplot lambda",i),col="blue",ylim = c(0,0.5))
+}
+plot(samples[,11],type = "l",main=paste("traceplot theta",i),col="blue",ylim = c(0.5,2.2))
+
+```
+
+
+\newpage
+
+These are also the autocorrelation functions, to see if there is serial  correlation.As expected, all autocorrelations decrease as the lag $t$ increases, until they reach practically zero values. In the case of $\theta$, they continue to have significant values for higher lags with respect to lambda's ones.
+
+```{r,echo=FALSE}
+par(mfrow=c(2,2))
+for (i in 1:4) {
+  acf(samples[,i],main=paste("Acf lambda",i))
+}
+
+```
+
+
+```{r,echo=FALSE}
+par(mfrow=c(2,2))
+for (i in 5:8) {
+  acf(samples[,i],main=paste("Acf lambda",i))
+}
+```
+
+
+```{r,echo=FALSE}
+par(mfrow=c(2,2))
+for (i in 9:10) {
+  acf(samples[,i],main=paste("Acf lambda",i))
+}
+acf(samples[,11],main=paste("Acf theta"))
+```
+
+\newpage
+\textbf{Model Comparison}
+
+It's not so easy to decide how  to compare model the two model. 
+As previously said, the ELO rating is a deterministic measure of the
+players’ strength, and it is define such that the difference in rating
+between two players determines an estimate for the expected score between them:
+
+$$E_{ij} = \frac{1}{2}P(i  \ ties  \ j) = \frac{1}{1+10 \frac{ELO_j-ELO_i}{400}}  $$
+we  can verify which model has an the expected score closer to it.
+
+We compute the ELO expected score for the two model:
+
+
+```{r,echo=FALSE}
+Elo<-matrix(0,nrow = 10, ncol = 2)
+Elo[,2]= c(2363,2345,2569,2666,2557,2363,2510,2564,2313,2380)
+team=c( "Bologna", "Fiorentina", "Inter", "Juventus","Lazio", "Milan", "Napoli",  "Roma", "Sampdoria", "Torino")
+```
+
+
+```{r}
+e=c(2363,2345,2569,2666,2557,2363,2510,2564,2313,2380)
+
+Expected_elo<-matrix(NA,10,10)
+colnames(Expected_elo)=team
+rownames(Expected_elo)=team
+for(i in 1:10){
+  for(j in 1:10){
+    if(i!=j){
+      temp=(e[j]-e[i])/400
+      Expected_elo[i,j]=1/(1+10^temp)
+    }
+  }
+}
+
+
+```
+
+
+```{r,echo=FALSE}
+print("Expected score Elo (for both models,just a subset):")
+#Expected_elo[is.na(Expected_elo)] = 0.001
+Expected_elo[1:2,1:5]
+Expected_elo[1:2,6:10]
+
+```
+
+For the model without ties the expected score are compute as follow:
+$$\frac{\lambda_i}{\lambda_i+\lambda_j}$$
+
+
+```{r,echo=FALSE}
+need_1=c(0.023 ,0.049,0.093, 0.287,0.070,0.089,0.172,0.132,0.048,0.037) 
+
+Expected_wt=matrix(NA,10,10)
+colnames(Expected_wt)=team
+rownames(Expected_wt)=team
+for(i in 1:10){
+  for(j in 1:10){
+    if(i!=j){
+      Expected_wt[i,j]=need_1[i]/(need_1[i]+need_1[j]) 
+    }
+  }
+}
+
+```
+
+```{r,echo=FALSE}
+#Expected_wt[is.na(Expected_wt)] = 0.001
+print("Expected value without ties (just a subset):")
+Expected_wt[1:2,1:5]
+Expected_wt[1:2,6:10]
+
+```
+
+And the corresponding mean error, computed as the mean of the
+absolute value of the difference between $E_{ij}$ and expected value of the
+model without ties, is: 
+```{r,echo=FALSE}
+mean_err<-mean(abs(Expected_elo-Expected_wt),na.rm = TRUE)
+mean_err
+```
+
+While in the case with ties expected value of the model is:
+$$p_1+\frac{1}{2}p_2= \frac{\lambda_i}{\lambda_i+\theta\lambda_j}+\frac{1}{2}\frac{(\theta^2-1)\lambda_i \lambda_j}{(\lambda_i+\theta\lambda_j)(\theta\lambda_i+\lambda_j)}$$
+
+```{r,echo=FALSE}
+need_2=c(0.037,0.059,0.1,0.252,0.074,0.089,0.156,0.126,0.054,0.052)
+
+Expected_t=matrix(NA,10,10)
+colnames(Expected_t)=team
+rownames(Expected_t)=team
+for(i in 1:10){
+  for(j in 1:10){
+    if(i!=j){
+      ties1=(((1.932 )^2-1)*need_2[i]*need_2[j])/((need_2[i]+1.932*need_2[j])*(1.932*need_2[i]+need_2[j]))
+      Expected_t[i,j]=(need_2[i]/(need_2[i]+1.932*need_2[j]))+0.5*ties1
+    }
+  }
+}
+
+```
+
+```{r,echo=FALSE}
+#Expected_t[is.na(Expected_t)] = 0.001
+print("Expected value with ties (just a subset):")
+Expected_t[1:2,1:5]
+Expected_t[1:2,6:10]
+```
+And the corresponding mean error is:
+```{r,echo=FALSE}
+mean_err<-mean(abs(Expected_elo-Expected_t),na.rm = TRUE)
+mean_err
+```
+So the Bradly Terry model with ties could be a better fit
+for the data since the mean error  is smaller! 
+A possible explanation for this solution is that in the second model there are more observation ($812$ vs $587$).
+
+
+\newpage
+\textbf{ Bibliography}
+
+[1] Caron, Francois, and Arnaud Doucet. "Efficient Bayesian inference for generalized Bradley–Terry models." Journal of Computational and Graphical Statistics 21.1 (2012): 174-196.
+
+[2] https://youhoo0521.github.io/kaggle-march-madness-men-2019/eda/pairwise_matchups.html
+
+[3] https://en.wikipedia.org/wiki/Elo_rating_system
+
+[4] https://www.calcioweb.eu/2019/11/dataset-calcio-performance-futuri-campioni/10375221/
+
+[5] http://fussballelo.de/en/rating.php?league=Serie%20A
+
+[6] Bradley, R. A. and M. E. Terry (1952). Rank analysis of incomplete block designs I: The method of paired comparisons. Biometrika 39, 324–45.
+
+[7] Critchlow, D. E. and M. A. Fligner (1991). Paired com parison, triple comparison, and ranking experiments as generalized linear models, and their implementation in GLIM. 
+
+[9] "Bradley-Terry models in R",David Firth (University of Warwick, United Kingdom). January 2005 Journal of Statistical Software 12(i01)
